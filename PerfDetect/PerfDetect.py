@@ -7,6 +7,7 @@ import pyodbc
 import matplotlib.pyplot as plt
 
 columnNameList = ['startDayHour','externalServiceName','externalServiceCall','requestUrl','numSamples','maxDuration','duration_P50','duration_P75','duration_P95','duration_P99']
+externalServiceNameList=['AdInsightsMiddleTier','BillingMiddleTier','CampaignMiddleTier','CampaignAggregatorService','ClientCenterMiddleTier','MessageCenterMiddleTier','ReportingMiddleTier']
 densityLength = 1000
 
 def connectDB():
@@ -17,6 +18,18 @@ def connectDB():
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 13 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
     return cursor
+
+def getRequestUrlList(cursor, externalServiceName):
+    requestUrlList = []
+    sqlQuery = "SELECT DISTINCT requestUrl " + \
+            "FROM [Kusto].[ExternalServiceCallPercentileTrend_Day]" + \
+            "WHERE externalServiceName='" + externalServiceName + "'"
+    cursor.execute(sqlQuery)
+    row = cursor.fetchone()
+    while row:
+        requestUrlList.append(row[0])
+        row = cursor.fetchone()
+    return requestUrlList
 
 def getSQLQuery(externalServiceName, requestUrl):
     columnNames = ""
@@ -76,7 +89,7 @@ def getP0(density):
     p0 = [1/np.sqrt(2*np.pi)/sEst, sEst, muEst]
     return p0
 
-def saveChart(density,origin,anomaly):
+def saveChart(density,origin,anomaly,figName):
     fig= plt.figure(figsize = (20, 7))
     plt.subplot(1,2,1)
     plt.plot(density['x'],density['y'])
@@ -84,7 +97,7 @@ def saveChart(density,origin,anomaly):
     plt.subplot(1,2,2)
     plt.plot(origin.startDayHour, origin.duration_P75)
     plt.plot(anomaly.startDayHour, anomaly.duration_P75,'ro')
-    fig.savefig('{}.png'.format(origin.iloc[-1].startDayHour))
+    fig.savefig('{}{}.png'.format(figName,origin.iloc[-1].startDayHour))
     plt.close(fig)
 
 def getThreshold(pEst):
@@ -93,20 +106,25 @@ def getThreshold(pEst):
     return mu+2*s
 
 cursor = connectDB()
-data = loadData(cursor,'CampaignAggregatorService','https://api.ucm.bingads.microsoft.com/api/v2/DataTable/BobAccounts')
-period = 120
-endIndex = len(data)
-for i in range(period,endIndex):
-    t0= i-period
-    origin = data[t0:i]
-    perf = origin.duration_P75
-    density = getDensity(perf)
-    p0 = getP0(density)
-    pEst= leastsq(errFunc, p0, args = (density['x'], density['y']))
-    density['yEst'] = gaussFunc(pEst[0],density['x'])
-    threshold = getThreshold(pEst)
-    anomaly = origin[perf>threshold]    
-    if (anomaly.iloc[-1].startDayHour == origin.iloc[-1].startDayHour):
-        saveChart(density, origin, anomaly)
-        #createIcM
+for externalServiceName in externalServiceNameList:
+    requestUrlList = getRequestUrlList(cursor, externalServiceName)
+    for requestUrl in requestUrlList:
+        data = loadData(cursor, externalServiceName, requestUrl)
+        period = 120
+        endIndex = len(data)
+        for i in range(period,endIndex):
+            t0= i-period
+            origin = data[t0:i]
+            perf = origin.duration_P75
+            density = getDensity(perf)
+            p0 = getP0(density)
+            pEst= leastsq(errFunc, p0, args = (density['x'], density['y']))
+            density['yEst'] = gaussFunc(pEst[0],density['x'])
+            threshold = getThreshold(pEst)
+            anomaly = origin[perf>threshold]
+            request = requestUrl[requestUrl.rfind('/')+1:]
+            saveChart(density, origin, anomaly,'{}_{}_'.format(externalServiceName,request))
+            #if (anomaly.iloc[-1].startDayHour == origin.iloc[-1].startDayHour):
+            #    saveChart(density, origin, anomaly, 'Anomaly_{}_{}_'.format(externalServiceName,request))
+                #createIcM
  
