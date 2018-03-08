@@ -58,13 +58,6 @@ def loadData(cursor, externalServiceName, requestUrl):
     df = df.rename(columns=lambda x: columnNameList[x])
     return df
 
-def gaussFunc(par, t):
-    return (par[0]/par[1])*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2)))
-
-def errFunc(par, t, y):
-    err= y - gaussFunc(par,t)
-    return err
-
 def getDensity(origin):
     xmin = origin.min()
     xmax = origin.max()
@@ -74,19 +67,52 @@ def getDensity(origin):
     density = {"x":xs,"y":ys}
     return density
 
+def gaussFunc(par, t):
+    return (par[0]/par[1])*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2)))
+
+def errFunc(par, t, y):
+    err= y - gaussFunc(par,t)
+    return err
+
 def getP0(density):
     xs = density['x']
     ys = density['y']
     indices= peakutils.indexes(-ys)
     indices= np.append(indices,0)
     indices= np.append(indices,densityLength-1)
-    peakIndex= np.argmax(ys)
-    peakMax= xs[peakIndex]
-    valleyDis= abs(indices-peakIndex)
-    valleyNear= xs[indices[np.argmin(valleyDis)]]
-    muEst = peakMax
-    sEst = abs(peakMax-valleyNear)/2
+    muEst = max(ys)
+    valleies = xs[indices]
+    dis = abs(valleies-muEst)
+    sEst = (min(dis)/2)
     p0 = [1/np.sqrt(2*np.pi)/sEst, sEst, muEst]
+    return p0
+
+def twoGaussFunc(par, t):
+    return (par[0]/par[1])*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2))) + \
+            (par[3]/par[4])*np.exp(-np.power(t-par[5],2)/(2*np.power(par[4],2)))
+    
+def errTwoGaussFunc(par, t, y):
+    err= y - twoGaussFunc(par,t)
+    return err
+
+def getTwoGaussP0(density):
+    xs = density['x']
+    ys = density['y']
+    peakIndices = peakutils.indexes(ys)
+    while (len(peakIndices) > 2):
+        peaks = ys[peakIndices]
+        peakIndices = np.delete(peakIndices,np.argmin(peaks))
+    muEst = xs[peakIndices]
+    sEst = []
+    valleyIndices= peakutils.indexes(-ys)
+    valleyIndices= np.append(valleyIndices,0)
+    valleyIndices= np.append(valleyIndices,densityLength-1)
+    valleies = xs[valleyIndices]
+    for mu in muEst:
+        dis = abs(valleies-mu)
+        sEst.append(min(dis)/2)
+    p0 = [1/np.sqrt(2*np.pi)/sEst[0], sEst[0], muEst[0], \
+         1/np.sqrt(2*np.pi)/sEst[1], sEst[1], muEst[1]]
     return p0
 
 def saveChart(density,origin,anomaly,figName):
@@ -117,9 +143,14 @@ for externalServiceName in externalServiceNameList:
             origin = data[t0:i]
             perf = origin.duration_P75
             density = getDensity(perf)
-            p0 = getP0(density)
-            pEst= leastsq(errFunc, p0, args = (density['x'], density['y']))
-            density['yEst'] = gaussFunc(pEst[0],density['x'])
+            if (len(peakutils.indexes(density['y'])) > 1):
+                p0 = getTwoGaussP0(density)
+                pEst= leastsq(errTwoGaussFunc, p0, args = (density['x'], density['y']))
+                density['yEst'] = twoGaussFunc(pEst[0],density['x'])
+            else:
+                p0 = getP0(density)
+                pEst= leastsq(errFunc, p0, args = (density['x'], density['y']))
+                density['yEst'] = gaussFunc(pEst[0],density['x'])
             threshold = getThreshold(pEst)
             anomaly = origin[perf>threshold]
             request = requestUrl[requestUrl.rfind('/')+1:]
