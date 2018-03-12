@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy import stats
-from scipy.optimize import leastsq
+from scipy.optimize import least_squares
 import peakutils
 import pyodbc 
 import matplotlib.pyplot as plt
@@ -111,6 +111,7 @@ def getTwoGaussP0(density):
     for mu in muEst:
         dis = abs(valleies-mu)
         sEst.append(min(dis)/2)
+        valleies = np.delete(valleies, np.argmin(dis))
     p0 = [1/np.sqrt(2*np.pi)/sEst[0], sEst[0], muEst[0], \
          1/np.sqrt(2*np.pi)/sEst[1], sEst[1], muEst[1]]
     return p0
@@ -125,10 +126,14 @@ def saveChart(density,origin,anomaly,figName):
     plt.plot(anomaly.startDayHour, anomaly.duration_P75,'ro')
     fig.savefig('{}{}.png'.format(figName,origin.iloc[-1].startDayHour))
     plt.close(fig)
-
+    
 def getThreshold(pEst):
-    mu= pEst[0][2]
-    s= pEst[0][1]
+    mu= pEst[2]
+    s= abs(pEst[1])
+    if (len(pEst) > 3):
+        if (pEst[2] < 0 or np.argmin([pEst[2],pEst[5]]) == 1):
+            mu = pEst[5]
+            s = abs(pEst[4])
     return mu+2*s
 
 cursor = connectDB()
@@ -138,20 +143,26 @@ for externalServiceName in externalServiceNameList:
         data = loadData(cursor, externalServiceName, requestUrl)
         period = 120
         endIndex = len(data)
+        lastOneGaussP = []
+        lastTwoGaussP = []
         for i in range(period,endIndex):
             t0= i-period
             origin = data[t0:i]
             perf = origin.duration_P75
             density = getDensity(perf)
             if (len(peakutils.indexes(density['y'])) > 1):
-                p0 = getTwoGaussP0(density)
-                pEst= leastsq(errTwoGaussFunc, p0, args = (density['x'], density['y']))
-                density['yEst'] = twoGaussFunc(pEst[0],density['x'])
+                if (len(lastTwoGaussP)>0):
+                    p0 = lastTwoGaussP
+                else:
+                    p0 = getTwoGaussP0(density)
+                pEst= least_squares(errTwoGaussFunc, p0, args = (density['x'], density['y']))
+                density['yEst'] = twoGaussFunc(pEst.x,density['x'])
+                lastTwoGaussP = abs(pEst.x)
             else:
                 p0 = getP0(density)
-                pEst= leastsq(errFunc, p0, args = (density['x'], density['y']))
-                density['yEst'] = gaussFunc(pEst[0],density['x'])
-            threshold = getThreshold(pEst)
+                pEst= least_squares(errFunc, p0, args = (density['x'], density['y']))
+                density['yEst'] = gaussFunc(pEst.x,density['x'])
+            threshold = getThreshold(pEst.x)
             anomaly = origin[perf>threshold]
             request = requestUrl[requestUrl.rfind('/')+1:]
             saveChart(density, origin, anomaly,'{}_{}_'.format(externalServiceName,request))
@@ -159,3 +170,45 @@ for externalServiceName in externalServiceNameList:
             #    saveChart(density, origin, anomaly, 'Anomaly_{}_{}_'.format(externalServiceName,request))
                 #createIcM
  
+
+    
+#externalServiceName = 'CampaignAggregatorService'
+#requestUrl = 'https://api.ucm.bingads.microsoft.com/api/v2/DataTable/BobAccounts'
+#data = loadData(cursor, externalServiceName, requestUrl)
+#period = 120
+#endIndex = len(data)
+#lastOneGaussP = []
+#lastTwoGaussP = []
+#for i in range(period,endIndex):
+#    t0= i-period
+#    origin = data[t0:i]
+#    perf = origin.duration_P75
+#    density = getDensity(perf)
+#    if (len(peakutils.indexes(density['y'])) > 1):
+#        if (len(lastTwoGaussP)>0):
+#            p0 = lastTwoGaussP
+#        else:
+#            p0 = getTwoGaussP0(density)
+#        pEst= least_squares(errTwoGaussFunc, p0, args = (density['x'], density['y']))
+#        density['yEst'] = twoGaussFunc(pEst.x,density['x'])
+#        lastTwoGaussP = abs(pEst.x)
+#    else:
+#        p0 = getP0(density)
+#        pEst= least_squares(errFunc, p0, args = (density['x'], density['y']))
+#        density['yEst'] = gaussFunc(pEst.x,density['x'])
+#    threshold = getThreshold(pEst.x)
+#    anomaly = origin[perf>threshold]
+#    request = requestUrl[requestUrl.rfind('/')+1:]
+#    fig= plt.figure(figsize = (20, 7))
+#    plt.subplot(1,2,1)
+#    plt.plot(density['x'],density['y'])
+#    plt.plot(density['x'],density['yEst'])
+#    plt.plot([threshold,threshold],[0,max(density['y'])],'r')
+#    plt.subplot(1,2,2)
+#    plt.plot(origin.startDayHour, origin.duration_P75)
+#    plt.plot(anomaly.startDayHour, anomaly.duration_P75,'ro')
+#    fig.savefig('{}_{}.png'.format(request,i-period))
+#    plt.close(fig)
+#    #if (anomaly.iloc[-1].startDayHour == origin.iloc[-1].startDayHour):
+#    #    saveChart(density, origin, anomaly, 'Anomaly_{}_{}_'.format(externalServiceName,request))
+#        #createIcM
