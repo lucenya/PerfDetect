@@ -22,7 +22,32 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DataProvider\ExternalServiceCallPerfDataProvider.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DataProvider\SqlConnector.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DataProvider\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GaussFitting\DensityProvider.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GaussFitting\OneGaussFitting.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GaussFitting\TwoGaussFitting.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GaussFitting\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PerfDetect.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DataProvider\" />
+    <Folder Include="GaussFitting\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

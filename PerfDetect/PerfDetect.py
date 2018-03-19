@@ -1,195 +1,96 @@
-import pandas as pd
-import numpy as np
-from scipy import stats
-from scipy.optimize import least_squares
-import peakutils
-import pyodbc 
+from DataProvider.ExternalServiceCallPerfDataProvider import *
+from GaussFitting import *
 import matplotlib.pyplot as plt
 
-columnNameList = ['startDayHour','externalServiceName','externalServiceCall','requestUrl','numSamples','maxDuration','duration_P50','duration_P75','duration_P95','duration_P99']
-externalServiceNameList=['AdInsightsMiddleTier','BillingMiddleTier','CampaignMiddleTier','CampaignAggregatorService','ClientCenterMiddleTier','MessageCenterMiddleTier','ReportingMiddleTier']
-densityLength = 1000
-
-def connectDB():
-    server = 'tcp:ucmloggingdatawarehouse.database.windows.net,1433' 
-    database = 'ucmloggingdatawarehouse' 
-    username = 'loggingDW_readonly' 
-    password = 'Read@Only123' 
-    cnxn = pyodbc.connect('DRIVER={ODBC Driver 13 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
-    cursor = cnxn.cursor()
-    return cursor
-
-def getRequestUrlList(cursor, externalServiceName):
-    requestUrlList = []
-    sqlQuery = "SELECT DISTINCT requestUrl " + \
-            "FROM [Kusto].[ExternalServiceCallPercentileTrend_Day]" + \
-            "WHERE externalServiceName='" + externalServiceName + "'"
-    cursor.execute(sqlQuery)
-    row = cursor.fetchone()
-    while row:
-        requestUrlList.append(row[0])
-        row = cursor.fetchone()
-    return requestUrlList
-
-def getSQLQuery(externalServiceName, requestUrl):
-    columnNames = ""
-    for name in columnNameList:
-        columnNames = columnNames + "[" + name + "],"
-    columnNames = columnNames[0:len(columnNames)-1]
-    sqlQuery = "SELECT " + columnNames + \
-            "FROM [Kusto].[ExternalServiceCallPercentileTrend_Day]" + \
-            "where externalServiceName = '" + externalServiceName +"' and " + \
-            "requestUrl='" + requestUrl + "' and " + \
-            "externalServiceCall='All' and " + \
-            "DATENAME(dw, startDayHour)<>'Saturday' and DATENAME(dw,startDayHour)<>'Sunday'" + \
-            "order by startDayHour"
-    return sqlQuery
-
-def loadData(cursor, externalServiceName, requestUrl):
-    sqlQuery = getSQLQuery(externalServiceName, requestUrl)
-    cursor.execute(sqlQuery)
-    df = pd.DataFrame()
-    row = cursor.fetchone()
-    while row:
-        rowAsList = [d for d in row]
-        dfRow = pd.DataFrame([rowAsList])
-        df = df.append(dfRow)
-        row = cursor.fetchone()
-    df = df.rename(columns=lambda x: columnNameList[x])
-    return df
-
-def getDensity(origin):
-    xmin = origin.min()
-    xmax = origin.max()
-    xs = np.linspace(xmin*0.5,xmax*1.2,densityLength)
-    densityFunc= stats.gaussian_kde(origin)
-    ys = densityFunc(xs)
-    density = {"x":xs,"y":ys}
-    return density
-
-def gaussFunc(par, t):
-    return (par[0]/par[1])*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2)))
-
-def errFunc(par, t, y):
-    err= y - gaussFunc(par,t)
-    return err
-
-def getP0(density):
-    xs = density['x']
-    ys = density['y']
-    indices= peakutils.indexes(-ys)
-    indices= np.append(indices,0)
-    indices= np.append(indices,densityLength-1)
-    muEst = max(ys)
-    valleies = xs[indices]
-    dis = abs(valleies-muEst)
-    sEst = (min(dis)/2)
-    p0 = [1/np.sqrt(2*np.pi)/sEst, sEst, muEst]
-    return p0
-
-def twoGaussFunc(par, t):
-    return (par[0]/par[1])*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2))) + \
-            (par[3]/par[4])*np.exp(-np.power(t-par[5],2)/(2*np.power(par[4],2)))
-    
-def errTwoGaussFunc(par, t, y):
-    err= y - twoGaussFunc(par,t)
-    return err
-
-def getTwoGaussP0(density):
-    xs = density['x']
-    ys = density['y']
-    peakIndices = peakutils.indexes(ys)
-    while (len(peakIndices) > 2):
-        peaks = ys[peakIndices]
-        peakIndices = np.delete(peakIndices,np.argmin(peaks))
-    muEst = xs[peakIndices]
-    sEst = []
-    valleyIndices= peakutils.indexes(-ys)
-    valleyIndices= np.append(valleyIndices,0)
-    valleyIndices= np.append(valleyIndices,densityLength-1)
-    valleies = xs[valleyIndices]
-    for mu in muEst:
-        dis = abs(valleies-mu)
-        sEst.append(min(dis)/2)
-        valleies = np.delete(valleies, np.argmin(dis))
-    p0 = [1/np.sqrt(2*np.pi)/sEst[0], sEst[0], muEst[0], \
-         1/np.sqrt(2*np.pi)/sEst[1], sEst[1], muEst[1]]
-    return p0
-
-def saveChart(density,origin,anomaly,figName):
+def saveChart(density,origin,externalServiceName,requestUrl):
+    request = requestUrl[requestUrl.rfind('/')+1:]
+    threshold = density['threshold']
+    anomaly = origin[origin.duration_P75 > threshold]
+    fileName = '{}_{}_{}.png'.format(externalServiceName,request,origin.iloc[-1].startDayHour)
     fig= plt.figure(figsize = (20, 7))
     plt.subplot(1,2,1)
     plt.plot(density['x'],density['y'])
     plt.plot(density['x'],density['yEst'])
+    plt.plot([threshold,threshold],[0,max(density['y'])],'r')
+    plt.title('{}'.format(density['param']))
     plt.subplot(1,2,2)
     plt.plot(origin.startDayHour, origin.duration_P75)
     plt.plot(anomaly.startDayHour, anomaly.duration_P75,'ro')
-    fig.savefig('{}{}.png'.format(figName,origin.iloc[-1].startDayHour))
+    fig.savefig(fileName)
     plt.close(fig)
     
-def getThreshold(pEst):
-    mu= pEst[2]
-    s= abs(pEst[1])
-    if (len(pEst) > 3):
-        if (pEst[2] < 0 or np.argmin([pEst[2],pEst[5]]) == 1):
-            mu = pEst[5]
-            s = abs(pEst[4])
-    return mu+2*s
 
-cursor = connectDB()
+externalServiceDataProvider = ExternalServiceCallPerfDataProvider()
 for externalServiceName in externalServiceNameList:
-    requestUrlList = getRequestUrlList(cursor, externalServiceName)
+    requestUrlList = externalServiceDataProvider.GetRequestUrlList(externalServiceName)
     for requestUrl in requestUrlList:
-        data = loadData(cursor, externalServiceName, requestUrl)
+        data = externalServiceDataProvider.GetPerfData(externalServiceName, requestUrl)
         period = 120
         endIndex = len(data)
-        lastOneGaussP = []
         lastTwoGaussP = []
         for i in range(period,endIndex):
             t0= i-period
             origin = data[t0:i]
             perf = origin.duration_P75
-            density = getDensity(perf)
-            if (len(peakutils.indexes(density['y'])) > 1):
-                if (len(lastTwoGaussP)>0):
-                    p0 = lastTwoGaussP
-                else:
-                    p0 = getTwoGaussP0(density)
-                pEst= least_squares(errTwoGaussFunc, p0, args = (density['x'], density['y']))
-                density['yEst'] = twoGaussFunc(pEst.x,density['x'])
-                lastTwoGaussP = abs(pEst.x)
+            density = DensityProvider.GetDensity(perf)
+            if (DensityProvider.IsOneMorePeak(density)):
+                density = TwoGaussFitting.Fitting(density, lastTwoGaussP)
+                lastTwoGaussP = density['param']
             else:
-                p0 = getP0(density)
-                pEst= least_squares(errFunc, p0, args = (density['x'], density['y']))
-                density['yEst'] = gaussFunc(pEst.x,density['x'])
-            threshold = getThreshold(pEst.x)
-            anomaly = origin[perf>threshold]
-            request = requestUrl[requestUrl.rfind('/')+1:]
-            saveChart(density, origin, anomaly,'{}_{}_'.format(externalServiceName,request))
+                density = OneGaussFitting.Fitting(density)                
+            saveChart(density, origin, externalServiceName, requestUrl)
             #if (anomaly.iloc[-1].startDayHour == origin.iloc[-1].startDayHour):
             #    saveChart(density, origin, anomaly, 'Anomaly_{}_{}_'.format(externalServiceName,request))
                 #createIcM
- 
 
-    
-#externalServiceName = 'CampaignAggregatorService'
-#requestUrl = 'https://api.ucm.bingads.microsoft.com/api/v2/DataTable/BobAccounts'
+
+
+
+#sqlConnector = SqlConnector()
+
+#for externalServiceName in externalServiceNameList:
+#    requestUrlList = getRequestUrlList(cursor, externalServiceName)
+#    for requestUrl in requestUrlList:
+#        data = loadData(cursor, externalServiceName, requestUrl)
+#        period = 120
+#        endIndex = len(data)
+#        lastTwoGaussP = []
+#        for i in range(period,endIndex):
+#            t0= i-period
+#            origin = data[t0:i]
+#            perf = origin.duration_P75
+#            density = getDensity(perf)
+#            if (len(peakutils.indexes(density['y'])) > 1):
+#                p0 = getTwoGaussP0(density,lastTwoGaussP)
+#                pEst= least_squares(errTwoGaussFunc, p0, args = (density['x'], density['y']), gtol=1e-9)
+#                density['yEst'] = twoGaussFunc(pEst.x,density['x'])
+#                lastTwoGaussP = abs(pEst.x)
+#            else:
+#                p0 = getP0(density)
+#                pEst= least_squares(errFunc, p0, args = (density['x'], density['y']))
+#                density['yEst'] = gaussFunc(pEst.x,density['x'])
+#            threshold = getThreshold(pEst.x)
+#            anomaly = origin[perf>threshold]
+#            request = requestUrl[requestUrl.rfind('/')+1:]
+#            saveChart(density, origin, anomaly,'{}_{}_'.format(externalServiceName,request),pEst)
+#            #if (anomaly.iloc[-1].startDayHour == origin.iloc[-1].startDayHour):
+#            #    saveChart(density, origin, anomaly, 'Anomaly_{}_{}_'.format(externalServiceName,request))
+#                #createIcM
+
+#externalServiceName = 'AdInsightsMiddleTier'
+#requestUrl = 'https://api.ucm.bingads.microsoft.com/api/v2/DataTable/AccountTiles'
 #data = loadData(cursor, externalServiceName, requestUrl)
 #period = 120
 #endIndex = len(data)
-#lastOneGaussP = []
 #lastTwoGaussP = []
-#for i in range(period,endIndex):
+#for i in range(period+58,endIndex):
 #    t0= i-period
 #    origin = data[t0:i]
 #    perf = origin.duration_P75
 #    density = getDensity(perf)
 #    if (len(peakutils.indexes(density['y'])) > 1):
-#        if (len(lastTwoGaussP)>0):
-#            p0 = lastTwoGaussP
-#        else:
-#            p0 = getTwoGaussP0(density)
-#        pEst= least_squares(errTwoGaussFunc, p0, args = (density['x'], density['y']))
+#        p0 = getTwoGaussP0(density,lastTwoGaussP)
+#        pEst= least_squares(errTwoGaussFunc, p0, args = (density['x'], density['y']), gtol=1e-9)
 #        density['yEst'] = twoGaussFunc(pEst.x,density['x'])
 #        lastTwoGaussP = abs(pEst.x)
 #    else:
@@ -199,16 +100,10 @@ for externalServiceName in externalServiceNameList:
 #    threshold = getThreshold(pEst.x)
 #    anomaly = origin[perf>threshold]
 #    request = requestUrl[requestUrl.rfind('/')+1:]
-#    fig= plt.figure(figsize = (20, 7))
-#    plt.subplot(1,2,1)
-#    plt.plot(density['x'],density['y'])
-#    plt.plot(density['x'],density['yEst'])
-#    plt.plot([threshold,threshold],[0,max(density['y'])],'r')
-#    plt.subplot(1,2,2)
-#    plt.plot(origin.startDayHour, origin.duration_P75)
-#    plt.plot(anomaly.startDayHour, anomaly.duration_P75,'ro')
-#    fig.savefig('{}_{}.png'.format(request,i-period))
-#    plt.close(fig)
+#    saveChart(density, origin, anomaly,'{}_{}_'.format(externalServiceName,request),pEst)
 #    #if (anomaly.iloc[-1].startDayHour == origin.iloc[-1].startDayHour):
 #    #    saveChart(density, origin, anomaly, 'Anomaly_{}_{}_'.format(externalServiceName,request))
 #        #createIcM
+ 
+
+    
