@@ -52,12 +52,21 @@
     <Compile Include="IcMManager\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Logger\credentials.py" />
+    <Compile Include="Logger\environment.py" />
+    <Compile Include="Logger\KustoLogger.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Logger\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PerfDetect.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DataProvider\" />
     <Folder Include="GaussFitting\" />
     <Folder Include="IcMManager\" />
+    <Folder Include="Logger\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

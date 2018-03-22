@@ -1,7 +1,9 @@
+import matplotlib.pyplot as plt
+import sys
 from DataProvider.ExternalServiceCallPerfDataProvider import *
 from GaussFitting import *
-import matplotlib.pyplot as plt
 from IcMManager.IcMManager import IcMManager
+from Logger.KustoLogger import *
 
 def saveChart(density,origin,anomaly,fileName):
     threshold = density['threshold']
@@ -11,11 +13,11 @@ def saveChart(density,origin,anomaly,fileName):
     #plt.plot(density['x'],density['y0Est'], 'g')
     plt.plot(density['x'],density['yEst'], 'y')
     plt.plot([threshold,threshold],[0,max(density['y'])],'r')
-    plt.title('{}'.format(density['param']))
+    plt.title('Density')
     plt.subplot(1,2,2)
     plt.plot(origin.startDayHour, origin.duration_P75)
     plt.plot(anomaly.startDayHour, anomaly.duration_P75,'ro')
-    #plt.title('{}'.format(density['param0']))
+    plt.title('Perf_P75')
     fig.savefig(fileName)
     plt.close(fig)
 
@@ -36,6 +38,7 @@ def createIcMAlert(density, origin, anomaly, externalServiceName, requestUrl):
     fileName = '{}_{}_{}.png'.format(externalServiceName,requestName,origin.iloc[-1].startDayHour)
     saveChart(density, origin, anomaly, fileName)
     
+Logger = KustoLogger()
 IcM = IcMManager()
 externalServiceDataProvider = ExternalServiceCallPerfDataProvider()
 for externalServiceName in ['CampaignAggregatorService']:
@@ -48,18 +51,29 @@ for externalServiceName in ['CampaignAggregatorService']:
         for i in range(period,endIndex):
             t0= i-period
             origin = data[t0:i]
+            detectedDate = origin.iloc[-1].startDayHour
             perf = origin.duration_P75
-            density = DensityProvider.GetDensity(perf)
-            if (DensityProvider.IsOneMorePeak(density)):
-                density = TwoGaussFitting.Fitting(density, lastTwoGaussP)
-                lastTwoGaussP = density['param']
-            else:
-                density = OneGaussFitting.Fitting(density)
+            try:
+                density = DensityProvider.GetDensity(perf)
+                if (DensityProvider.IsOneMorePeak(density)):
+                    density = TwoGaussFitting.Fitting(density, lastTwoGaussP)
+                    lastTwoGaussP = density['param']
+                else:
+                    density = OneGaussFitting.Fitting(density)
+            except:
+                Logger.ExecuteError(KustoLogType.fit_density_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
+
             anomaly = origin[origin.duration_P75 > density['threshold']]
-            if (anomaly.iloc[-1].startDayHour == origin.iloc[-1].startDayHour):
+            if (anomaly.iloc[-1].startDayHour == detectedDate):
                 descriptions = getDecriptions(density, origin, externalServiceName, requestUrl)
                 saveChart(density, origin, anomaly, descriptions['fileName'])
-                IcM.CreatOrUpdateIcM(descriptions['IcM_PerfKey'], descriptions['IcM_Title'], descriptions['IcM_Description'], descriptions['fileName'])
+                try:
+                    incidentId = IcM.CreatOrUpdateIcM(descriptions['IcM_PerfKey'], descriptions['IcM_Title'], descriptions['IcM_Description'], descriptions['fileName'])
+                except:
+                    Logger.ExecuteError(KustoLogType.call_icm_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
+                Logger.PerfAnomaly(externalServiceName, requestUrl, detectedDate, incidentId, descriptions['IcM_Description'])
+            else:
+                Logger.PerfNormal(externalServiceName, requestUrl, detectedDate)
 
 
 
