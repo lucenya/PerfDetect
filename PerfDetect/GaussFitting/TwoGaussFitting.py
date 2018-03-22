@@ -1,24 +1,21 @@
-from scipy.optimize import least_squares
+from scipy.optimize import leastsq
 import numpy as np
 import peakutils
 
 lastTwoGaussP = []
 
 def twoGaussFunc(par, t):
-    return (par[0]/par[1])*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2))) + \
-            (par[3]/par[4])*np.exp(-np.power(t-par[5],2)/(2*np.power(par[4],2)))
+    return (par[0]/2)*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2))) + \
+            (par[3]/2)*np.exp(-np.power(t-par[5],2)/(2*np.power(par[4],2)))
     
 def errTwoGaussFunc(par, t, y):
     err= y - twoGaussFunc(par,t)
     return err
 
-def getMaxTwoPeakIndex(density):
+def getFirstTwoPeakIndex(density):
     peakIndices = peakutils.indexes(density['y'])
-    while (len(peakIndices) > 2):
-        peaks = ys[peakIndices]
-        peakIndices = np.delete(peakIndices,np.argmin(peaks))
     peakIndices.sort()
-    return peakIndices
+    return peakIndices[:2]
 
 def isSameWithLastMu(muEst, lastTwoGaussP):
     if (len(lastTwoGaussP) < 6):
@@ -31,9 +28,11 @@ def getSigma(density, twoPeakIndex):
     ys = density['y']
     sEst = []
     valleyIndices= peakutils.indexes(-ys)
-    valleyIndices= np.append(valleyIndices,0)
-    valleyIndices= np.append(valleyIndices,int(len(xs)-1))
+    if (len(valleyIndices)==0):
+        valleyIndices = np.append(valleyIndices, int(np.average(twoPeakIndex)))
     valleies = xs[valleyIndices]
+    valleies= np.append(valleies,min(xs))
+    valleies= np.append(valleies,max(xs))
     muEst = xs[twoPeakIndex]
     isSecondPeakHigher = ys[twoPeakIndex[0]] < ys[twoPeakIndex[1]]
     if (isSecondPeakHigher):
@@ -50,7 +49,7 @@ def getSigma(density, twoPeakIndex):
 def getTwoGaussP0(density, lastTwoGaussP):
     xs = density['x']
     ys = density['y']
-    twoPeakIndex = getMaxTwoPeakIndex(density)
+    twoPeakIndex = getFirstTwoPeakIndex(density)
     muEst = xs[twoPeakIndex]
     if (isSameWithLastMu(muEst, lastTwoGaussP)):
         return lastTwoGaussP
@@ -70,10 +69,12 @@ def getThreshold(pEst):
 
 def Fitting(density, lastTwoGaussP):
     p0 = getTwoGaussP0(density, lastTwoGaussP)
-    pEst= least_squares(errTwoGaussFunc, p0, args = (density['x'], density['y']))
-    density['yEst'] = twoGaussFunc(pEst.x,density['x'])
-    density['param'] = pEst.x
-    density['threshold'] = getThreshold(pEst.x)
+    pEst= leastsq(errTwoGaussFunc, p0, args = (density['x'], density['y']))
+    density['param0'] = p0
+    density['y0Est'] = twoGaussFunc(p0,density['x'])
+    density['param'] = pEst[0]
+    density['yEst'] = twoGaussFunc(pEst[0],density['x'])
+    density['threshold'] = getThreshold(pEst[0])
     return density
 
 

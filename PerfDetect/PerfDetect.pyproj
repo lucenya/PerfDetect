@@ -43,11 +43,21 @@
     <Compile Include="GaussFitting\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="IcMManager\credentials.py" />
+    <Compile Include="IcMManager\environment.py" />
+    <Compile Include="IcMManager\IcMManager.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="IcMManager\icm_client.py" />
+    <Compile Include="IcMManager\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PerfDetect.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DataProvider\" />
     <Folder Include="GaussFitting\" />
+    <Folder Include="IcMManager\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
