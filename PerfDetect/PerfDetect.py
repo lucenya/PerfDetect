@@ -44,36 +44,31 @@ externalServiceDataProvider = ExternalServiceCallPerfDataProvider()
 for externalServiceName in ['CampaignAggregatorService']:
     requestUrlList = externalServiceDataProvider.GetRequestUrlList(externalServiceName)
     for requestUrl in ['All']:
-        data = externalServiceDataProvider.GetPerfData(externalServiceName, requestUrl)
-        period = 120
-        endIndex = len(data)
+        origin = externalServiceDataProvider.GetPerfData(externalServiceName, requestUrl)
         lastTwoGaussP = []
-        for i in range(period,endIndex):
-            t0= i-period
-            origin = data[t0:i]
-            detectedDate = origin.iloc[-1].startDayHour
-            perf = origin.duration_P75
-            try:
-                density = DensityProvider.GetDensity(perf)
-                if (DensityProvider.IsOneMorePeak(density)):
-                    density = TwoGaussFitting.Fitting(density, lastTwoGaussP)
-                    lastTwoGaussP = density['param']
-                else:
-                    density = OneGaussFitting.Fitting(density)
-            except:
-                Logger.ExecuteError(KustoLogType.fit_density_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
-
-            anomaly = origin[origin.duration_P75 > density['threshold']]
-            if (anomaly.iloc[-1].startDayHour == detectedDate):
-                descriptions = getDecriptions(density, origin, externalServiceName, requestUrl)
-                saveChart(density, origin, anomaly, descriptions['fileName'])
-                try:
-                    incidentId = IcM.CreatOrUpdateIcM(descriptions['IcM_PerfKey'], descriptions['IcM_Title'], descriptions['IcM_Description'], descriptions['fileName'])
-                except:
-                    Logger.ExecuteError(KustoLogType.call_icm_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
-                Logger.PerfAnomaly(externalServiceName, requestUrl, detectedDate, incidentId, descriptions['IcM_Description'])
+        detectedDate = origin.iloc[-1].startDayHour
+        perf = origin.duration_P75
+        try:
+            density = DensityProvider.GetDensity(perf)
+            if (DensityProvider.IsOneMorePeak(density)):
+                density = TwoGaussFitting.Fitting(density, lastTwoGaussP)
+                lastTwoGaussP = density['param']
             else:
-                Logger.PerfNormal(externalServiceName, requestUrl, detectedDate)
+                density = OneGaussFitting.Fitting(density)
+        except:
+            Logger.ExecuteError(KustoLogType.fit_density_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
+
+        anomaly = origin[origin.duration_P75 > density['threshold']]
+        if (anomaly.iloc[-1].startDayHour == detectedDate):
+            descriptions = getDecriptions(density, origin, externalServiceName, requestUrl)
+            saveChart(density, origin, anomaly, descriptions['fileName'])
+            try:
+                incidentId = IcM.CreatOrUpdateIcM(descriptions['IcM_PerfKey'], descriptions['IcM_Title'], descriptions['IcM_Description'], descriptions['fileName'])
+            except:
+                Logger.ExecuteError(KustoLogType.call_icm_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
+            Logger.PerfAnomaly(externalServiceName, requestUrl, detectedDate, incidentId, descriptions['IcM_Description'])
+        else:
+            Logger.PerfNormal(externalServiceName, requestUrl, detectedDate)
 
 
 

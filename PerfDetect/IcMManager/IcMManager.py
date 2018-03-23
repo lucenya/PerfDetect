@@ -1,5 +1,6 @@
 import logging
 import base64
+import pandas as pd
 from . import icm_client
 from . import credentials
 #import icm_client
@@ -15,18 +16,22 @@ class IcMManager(object):
     cert = credentials.primary_cert
     key = credentials.primary_key
     connector_id = credentials.ppe_connector_id
-    perfIncidentIdDic = {}
 
     def __init__(self):
         self.icm_api = icm_client.ICMApi(icm_host=self.host, cert="./IcMManager/cert/cert.pem", key="./IcMManager/cert/key.pem", connector_id=self.connector_id, debug=True)
+        self.perf_icm_file = "./perfIcM.csv"
 
     def CreatOrUpdateIcM(self, perfKey, title, descriptionEntryText, attachedFile):
-        if (perfKey in self.perfIncidentIdDic and self.isIcMActive(self.perfIncidentIdDic[perfKey])):
-            incidentId = self.perfIncidentIdDic[perfKey]
+        perfIcM = pd.read_csv(self.perf_icm_file, header=0)
+        perfIcMDic = perfIcM.to_dict('list')
+        if (perfKey in perfIcMDic and self.isIcMActive(perfIcMDic[perfKey][0])):
+            incidentId = perfIcMDic[perfKey][0]
             self.updateIcM(incidentId, descriptionEntryText)            
         else:
             incidentId = self.createIcM(title, descriptionEntryText)
-            self.perfIncidentIdDic[perfKey] = incidentId
+            perfIcMDic[perfKey] = incidentId
+            df = pd.DataFrame.from_dict(perfIcMDic)
+            df.to_csv(self.perf_icm_file)
         self.addAttachment(incidentId, attachedFile)
         return incidentId
 
@@ -54,13 +59,6 @@ class IcMManager(object):
         body = {'Attachment': {'Filename': fileName, 'ContentsBase64': content.decode('utf-8')}}
         result = self.icm_api.update_incident(incident_id=incidentId, body=body, entity='CreateAttachment')
         return result
-
-    #def addHitCount(self, incidentId):
-    #    incident = self.getIcM(incidentId)
-    #    body = {'HitCount': str(int(incident['HitCount'])+1)}
-    #    result = self.icm_api.update_incident(incident_id=incidentId, body=body,  entity='HitCount')
-    #    incident = self.getIcM(incidentId)
-    #    print(incident)    
         
     def isIcMActive(self, incidentId):
         incident = self.getIcM(incidentId)
@@ -71,7 +69,7 @@ class IcMManager(object):
 
 
 #IcM = IcMManager()
-#IcM.isIcMActive('51772828')
+#IcM.isIcMExist('[Perf]CampaignAggregatorService under All drops')
 #IcM.CreatOrUpdateIcM('a', 'title', 'descriptionEntryText', 'CampaignAggregatorService_All_2017-09-06.png')
 #IcM.getIcM('51749190')
 #IcM.addHitCount('51749190')
