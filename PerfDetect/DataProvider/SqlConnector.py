@@ -27,7 +27,7 @@ class SqlConnector:
             df = df.append(dfRow)
             row = self.cursor.fetchone()
         df = df.rename(columns=lambda x: columnNameList[x])
-        df = df.sort(columnNameList[0])
+        df = df.sort_values(by=[columnNameList[0]])
         return df
 
     def GetDataAsList(self, sqlQuery):        

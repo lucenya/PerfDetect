@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>fde657e0-494d-4193-aa8c-321de9691e52</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>IcMManager\IcMManager.py</StartupFile>
+    <StartupFile>PerfDetect.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>

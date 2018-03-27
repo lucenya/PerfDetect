@@ -14,6 +14,11 @@ class ExternalServiceCallPerfDataProvider(object):
     def GetRequestUrlList(self, externalServiceName):
         sqlQuery = self.getRequestUrlListSQLQuery(externalServiceName)
         return self.sqlConnect.GetDataAsList(sqlQuery)
+    
+    def GetStartDate(self, externalServiceName):
+        sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, 'All')
+        df = self.sqlConnect.GetDataAsDataFrame(sqlQuery)
+        return df.iloc[0].startDayHour
 
     def getRequestUrlListSQLQuery(self, externalServiceName):
         sqlQuery = "SELECT DISTINCT requestUrl " + \

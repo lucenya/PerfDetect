@@ -1,11 +1,8 @@
 FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \
-python3-numpy python3-scipy python3-matplotlib python3-pandas
-
-RUN apt-get update && apt-get install -y \
-curl apt-utils apt-transport-https debconf-utils gcc build-essential unixodbc-dev\
-&& rm -rf /var/lib/apt/lists/*
+python3-pandas python3-numpy python3-scipy python3-matplotlib \
+curl apt-utils apt-transport-https debconf-utils gcc build-essential unixodbc-dev
 
 # python libraries
 RUN apt-get update && apt-get install -y \
@@ -38,13 +35,19 @@ RUN apt-get update && apt-get install -y locales \
 RUN dpkg-reconfigure locales
 
 #install Kusto
-RUN python3 -m pip install azure==2.0.0rc6 
-RUN python3 -m pip install http://52.173.187.55/simple/kusto_client-0.4.0-py2.py3-none-any.whl
-RUN python3 -m pip install http://52.173.187.55/simple/kusto_ingest_client-0.3.3-py2.py3-none-any.whl
+RUN python3 -m pip install azure-kusto-data
+RUN python3 -m pip install azure-kusto-ingest
 
 RUN apt-get update
 RUN mkdir /home/PerfDetect
 ADD ./PerfDetect /home/PerfDetect
 
-RUN mkdir /home/PerfDetect/log
+WORKDIR /home/PerfDetect
 
+VOLUME /var/log/
+
+RUN echo "* * * * * echo 'Hello' >> /var/log/cron.log 2>&1" >> /etc/cron.d/perf 
+RUN crontab /etc/cron.d/perf
+RUN start cron 
+RUN touch /var/log/cron.log 
+RUN tail -f /var/log/cron.log

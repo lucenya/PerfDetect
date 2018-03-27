@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import sys
+from datetime import datetime
 from DataProvider.ExternalServiceCallPerfDataProvider import *
 from GaussFitting import *
 from IcMManager.IcMManager import IcMManager
@@ -29,47 +30,47 @@ def getDecriptions(density, origin, externalServiceName, requestUrl):
     decriptions['fileName'] = '{}_{}_{}.png'.format(externalServiceName,requestName,dataTime)
     decriptions['IcM_PerfKey'] = '{}_{}'.format(externalServiceName,requestName)
     decriptions['IcM_Title'] = '[Perf]{} under {} drops'.format(externalServiceName, requestName)
-    decriptions['IcM_Description'] = ('[Perf]{} under {} drops.'.format(externalServiceName, requestUrl) + '\n' + 
+    decriptions['IcM_Description'] = ('[Perf]{} under {} drops in {}.'.format(externalServiceName, requestUrl, dataTime) + '\n' + 
                                       'Current Perf is {} and the threshold is {}'.format(curPerf, density['threshold']))
     return decriptions
 
-def createIcMAlert(density, origin, anomaly, externalServiceName, requestUrl):
-    requestName = requestUrl[requestUrl.rfind('/')+1:]
-    fileName = '{}_{}_{}.png'.format(externalServiceName,requestName,origin.iloc[-1].startDayHour)
-    saveChart(density, origin, anomaly, fileName)
-    
 Logger = KustoLogger()
 IcM = IcMManager()
 externalServiceDataProvider = ExternalServiceCallPerfDataProvider()
+print('Perf Detect Start {}'.format(datetime.now()))
 for externalServiceName in ['CampaignAggregatorService']:
     requestUrlList = externalServiceDataProvider.GetRequestUrlList(externalServiceName)
-    for requestUrl in ['All']:
+    startDate = externalServiceDataProvider.GetStartDate(externalServiceName)
+    for requestUrl in requestUrlList:
         origin = externalServiceDataProvider.GetPerfData(externalServiceName, requestUrl)
-        lastTwoGaussP = []
-        detectedDate = origin.iloc[-1].startDayHour
+        if (origin.shape[0] != 120 or origin.iloc[0].startDayHour != startDate):
+            print("{} doesn't contain last 120 weekday data".format(requestUrl))
+            continue
+
+        detectedDate = origin.iloc[-1].startDayHour        
         perf = origin.duration_P75
         try:
             density = DensityProvider.GetDensity(perf)
             if (DensityProvider.IsOneMorePeak(density)):
-                density = TwoGaussFitting.Fitting(density, lastTwoGaussP)
-                lastTwoGaussP = density['param']
+                density = TwoGaussFitting.Fitting(density, '{}_{}'.format(externalServiceName, requestUrl[requestUrl.rfind('/')+1:]) )
             else:
                 density = OneGaussFitting.Fitting(density)
-        except:
-            Logger.ExecuteError(KustoLogType.fit_density_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
+        except Exception as e:
+            Logger.ExecuteError(KustoLogType.fit_density_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(e))
+            continue
 
         anomaly = origin[origin.duration_P75 > density['threshold']]
-        if (anomaly.iloc[-1].startDayHour == detectedDate):
+        if ((not anomaly.empty) and  anomaly.iloc[-1].startDayHour == detectedDate):
             descriptions = getDecriptions(density, origin, externalServiceName, requestUrl)
             saveChart(density, origin, anomaly, descriptions['fileName'])
             try:
                 incidentId = IcM.CreatOrUpdateIcM(descriptions['IcM_PerfKey'], descriptions['IcM_Title'], descriptions['IcM_Description'], descriptions['fileName'])
-            except:
-                Logger.ExecuteError(KustoLogType.call_icm_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(sys.exc_info()[0]))
-            Logger.PerfAnomaly(externalServiceName, requestUrl, detectedDate, incidentId, descriptions['IcM_Description'])
+                Logger.PerfAnomaly(externalServiceName, requestUrl, detectedDate, incidentId, descriptions['IcM_Description'])
+            except Exception as e:
+                Logger.ExecuteError(KustoLogType.call_icm_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(e))            
         else:
             Logger.PerfNormal(externalServiceName, requestUrl, detectedDate)
-
+print('Perf Detect Finish {}'.format(datetime.now()))
 
 
 

@@ -1,7 +1,6 @@
 import csv
 from datetime import datetime
-from kusto_ingest_client.IngestionProperties import *
-from kusto_ingest_client.KustoIngestClient import KustoIngestClient
+from azure.kusto.ingest import KustoIngestClient, IngestionProperties, FileDescriptor, BlobDescriptor, DataFormat
 from . import credentials
 from . import environment
 
@@ -20,8 +19,7 @@ class KustoLogger(object):
         self.ingest_client = KustoIngestClient(environment.kusto_ppe_ingest_connection,
                                                client_id=credentials.kusto_application_id,
                                                client_secret=credentials.kusto_application_key)
-        self.properties = IngestionProperties(database="BingAdsUCM", table="PerfIcMAlertEvent",
-                                                                    format=DataFormat.csv)
+        self.properties = IngestionProperties(database="BingAdsUCM", table="PerfIcMAlertEvent",dataFormat=DataFormat.csv)
         self.log_buffer_file = "kusto_log_buffer.csv"
 
     def PerfNormal(self, externalServiceName, requestUrl, detectedDate):
@@ -78,7 +76,7 @@ class KustoLogger(object):
             self._push_log()
 
     def _push_log(self):
-        self.ingest_client.__IngestFromMultipleFiles__([self.log_buffer_file], deleteSourcesOnSuccess=True,
+        self.ingest_client.ingest_from_multiple_files([self.log_buffer_file], delete_sources_on_success=True,
                                                        ingestion_properties=self.properties)
         # clean buffer
         open(self.log_buffer_file, "w").close()

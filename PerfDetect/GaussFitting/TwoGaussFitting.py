@@ -1,8 +1,9 @@
 from scipy.optimize import leastsq
 import numpy as np
 import peakutils
+import pandas as pd
 
-lastTwoGaussP = []
+lastTwoGaussPFile = "./lastTwoGaussP.csv"
 
 def twoGaussFunc(par, t):
     return (par[0]/2)*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2))) + \
@@ -67,14 +68,27 @@ def getThreshold(pEst):
         s = abs(pEst[4])
     return mu+2*s
 
-def Fitting(density, lastTwoGaussP):
-    p0 = getTwoGaussP0(density, lastTwoGaussP)
+def getLastTwoGaussP(perfKey):
+    lastTwoGaussP = pd.read_csv(lastTwoGaussPFile, header=0)
+    lastTwoGaussPDic = lastTwoGaussP.to_dict('list')
+    return lastTwoGaussPDic
+
+def setLastTwoGaussP(lastTwoGaussPDic, perfKey, pValue):
+    lastTwoGaussPDic[perfKey] = pValue
+    df = pd.DataFrame.from_dict(lastTwoGaussPDic)
+    df.to_csv(lastTwoGaussPFile, index=False)
+
+def Fitting(density, perfKey):
+    lastTwoGaussP = getLastTwoGaussP(perfKey)
+    lastPerfKeyP = lastTwoGaussP[perfKey] if perfKey in lastTwoGaussP else []
+    p0 = getTwoGaussP0(density, lastPerfKeyP)
     pEst= leastsq(errTwoGaussFunc, p0, args = (density['x'], density['y']))
     density['param0'] = p0
     density['y0Est'] = twoGaussFunc(p0,density['x'])
     density['param'] = pEst[0]
     density['yEst'] = twoGaussFunc(pEst[0],density['x'])
     density['threshold'] = getThreshold(pEst[0])
+    setLastTwoGaussP(lastTwoGaussP, perfKey, density['param'].tolist())
     return density
 
 

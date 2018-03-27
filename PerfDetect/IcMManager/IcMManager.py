@@ -31,7 +31,7 @@ class IcMManager(object):
             incidentId = self.createIcM(title, descriptionEntryText)
             perfIcMDic[perfKey] = incidentId
             df = pd.DataFrame.from_dict(perfIcMDic)
-            df.to_csv(self.perf_icm_file)
+            df.to_csv(self.perf_icm_file, index=False)
         self.addAttachment(incidentId, attachedFile)
         return incidentId
 
@@ -63,7 +63,7 @@ class IcMManager(object):
     def isIcMActive(self, incidentId):
         incident = self.getIcM(incidentId)
         status = incident['Status']
-        return status=='Active'
+        return status == 'Active' or status == 'Correlating'
 
             
 
