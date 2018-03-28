@@ -19,7 +19,7 @@ class IcMManager(object):
 
     def __init__(self):
         self.icm_api = icm_client.ICMApi(icm_host=self.host, cert="./IcMManager/cert/cert.pem", key="./IcMManager/cert/key.pem", connector_id=self.connector_id, debug=True)
-        self.perf_icm_file = "./perfIcM.csv"
+        self.perf_icm_file = "/home/PerfDetect/perfIcM.csv"
 
     def CreatOrUpdateIcM(self, perfKey, title, descriptionEntryText, attachedFile):
         perfIcM = pd.read_csv(self.perf_icm_file, header=0)

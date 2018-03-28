@@ -44,10 +44,10 @@ ADD ./PerfDetect /home/PerfDetect
 
 WORKDIR /home/PerfDetect
 
+RUN chmod 777 /home/PerfDetect/PerfDetectRunner.sh
+RUN sed -i "s/\r$//" /home/PerfDetect/PerfDetectRunner.sh
+
 VOLUME /var/log/
 
-RUN echo "* * * * * echo 'Hello' >> /var/log/cron.log 2>&1" >> /etc/cron.d/perf 
-RUN crontab /etc/cron.d/perf
-RUN start cron 
-RUN touch /var/log/cron.log 
-RUN tail -f /var/log/cron.log
+CMD ["bash","/home/PerfDetect/PerfDetectRunner.sh"]
+

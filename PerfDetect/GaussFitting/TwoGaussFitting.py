@@ -3,7 +3,7 @@ import numpy as np
 import peakutils
 import pandas as pd
 
-lastTwoGaussPFile = "./lastTwoGaussP.csv"
+lastTwoGaussPFile = "/home/PerfDetect/lastTwoGaussP.csv"
 
 def twoGaussFunc(par, t):
     return (par[0]/2)*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2))) + \
