@@ -1,0 +1,7 @@
+[
+  "Test/test_icmManager.py::test_CreatOrUpdateIcM_new",
+  "Test/test_icmManager.py::test_CreatOrUpdateIcM_exist",
+  "Test/test_icmManager.py::test_getIcM",
+  "Test/test_icmManager.py::test_updateIcM",
+  "Test/test_icmManager.py::test_isIcMActive"
+]

@@ -1,6 +1,7 @@
 import logging
 import base64
 import pandas as pd
+from retry import retry
 from . import icm_client
 from . import credentials
 #import icm_client
@@ -11,27 +12,23 @@ from . import credentials
 #sys.path.append(path.abspath('../'))
 #from icm import icm_client
 
-class IcMManager(object):
-    host = credentials.ppe_host
-    cert = credentials.primary_cert
-    key = credentials.primary_key
-    connector_id = credentials.ppe_connector_id
+host = credentials.ppe_host
+cert = credentials.primary_cert
+key = credentials.primary_key
+connector_id = credentials.ppe_connector_id
 
-    def __init__(self):
-        self.icm_api = icm_client.ICMApi(icm_host=self.host, cert=self.cert, key=self.key, connector_id=self.connector_id, debug=True)
-        self.perf_icm_file = "/home/PerfDetect/perfIcM.csv"
+class IcMManager(object):
+    def __init__(self, mongoDB):
+        self.icm_api = icm_client.ICMApi(icm_host=host, cert=cert, key=key, connector_id=connector_id, debug=True)
+        self.mongoDB = mongoDB
 
     def CreatOrUpdateIcM(self, perfKey, title, descriptionEntryText, attachedFile):
-        perfIcM = pd.read_csv(self.perf_icm_file, header=0)
-        perfIcMDic = perfIcM.to_dict('list')
-        if (perfKey in perfIcMDic and self.isIcMActive(perfIcMDic[perfKey][0])):
-            incidentId = perfIcMDic[perfKey][0]
-            self.updateIcM(incidentId, descriptionEntryText)            
+        existIncidentId = self.mongoDB.GetIncident(perfKey)
+        if (existIncidentId != -1 and self.isIcMActive(existIncidentId)):
+            self.updateIcM(existIncidentId, descriptionEntryText)            
         else:
             incidentId = self.createIcM(title, descriptionEntryText)
-            perfIcMDic[perfKey] = incidentId
-            df = pd.DataFrame.from_dict(perfIcMDic)
-            df.to_csv(self.perf_icm_file, index=False)
+            self.mongoDB.SaveIncident(perfKey, incidentId)
         self.addAttachment(incidentId, attachedFile)
         return incidentId
 
@@ -53,6 +50,7 @@ class IcMManager(object):
         result = self.icm_api.update_incident(incident_id=incidentId, body=body)
         return result
 
+    @retry(tries=5, delay=2)
     def addAttachment(self, incidentId, fileName):
         with open(fileName, 'rb') as attachment_file:
             content = base64.b64encode(attachment_file.read())

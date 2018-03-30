@@ -3,10 +3,14 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import sys
 from datetime import datetime
-from DataProvider.ExternalServiceCallPerfDataProvider import *
-from GaussFitting import *
+from DataProvider.ExternalServiceCallPerfDataProvider import ExternalServiceCallPerfDataProvider
+from GaussFitting import DensityProvider
+from GaussFitting import OneGaussFitting
+from GaussFitting import TwoGaussFitting
 from IcMManager.IcMManager import IcMManager
-from Logger.KustoLogger import *
+from Logger.KustoLogger import KustoLogger
+from Logger.KustoLogger import KustoLogType
+from MongoDB.MongoDB import MongoDB
 
 def saveChart(density,origin,anomaly,fileName):
     threshold = density['threshold']
@@ -24,20 +28,24 @@ def saveChart(density,origin,anomaly,fileName):
     fig.savefig(fileName)
     plt.close(fig)
 
+def getPerfKey(externalServiceName, requestUrl):
+    requestName = requestUrl[requestUrl.rfind('/')+1:]
+    return '{}_{}'.format(externalServiceName,requestName)
+
 def getDecriptions(density, origin, externalServiceName, requestUrl):
     dataTime = origin.iloc[-1].startDayHour
     curPerf = origin.iloc[-1].duration_P75
     requestName = requestUrl[requestUrl.rfind('/')+1:]
     decriptions = {}
     decriptions['fileName'] = '{}_{}_{}.png'.format(externalServiceName,requestName,dataTime)
-    decriptions['IcM_PerfKey'] = '{}_{}'.format(externalServiceName,requestName)
     decriptions['IcM_Title'] = '[Perf]{} under {} drops'.format(externalServiceName, requestName)
     decriptions['IcM_Description'] = ('[Perf]{} under {} drops in {}.'.format(externalServiceName, requestUrl, dataTime) + '\n' + 
                                       'Current Perf is {} and the threshold is {}'.format(curPerf, density['threshold']))
     return decriptions
 
 Logger = KustoLogger()
-IcM = IcMManager()
+mongoDB = MongoDB()
+IcM = IcMManager(mongoDB)
 externalServiceDataProvider = ExternalServiceCallPerfDataProvider()
 print('Perf Detect Start {}'.format(datetime.now()))
 for externalServiceName in ['CampaignAggregatorService']:
@@ -49,12 +57,13 @@ for externalServiceName in ['CampaignAggregatorService']:
             print("{} doesn't contain last 120 weekday data".format(requestUrl))
             continue
 
+        perfKey = getPerfKey(externalServiceName, requestUrl)
         detectedDate = origin.iloc[-1].startDayHour        
         perf = origin.duration_P75
         try:
             density = DensityProvider.GetDensity(perf)
             if (DensityProvider.IsOneMorePeak(density)):
-                density = TwoGaussFitting.Fitting(density, '{}_{}'.format(externalServiceName, requestUrl[requestUrl.rfind('/')+1:]) )
+                density = TwoGaussFitting.Fitting(density, perfKey, mongoDB)
             else:
                 density = OneGaussFitting.Fitting(density)
         except Exception as e:
@@ -66,7 +75,7 @@ for externalServiceName in ['CampaignAggregatorService']:
             descriptions = getDecriptions(density, origin, externalServiceName, requestUrl)
             saveChart(density, origin, anomaly, descriptions['fileName'])
             try:
-                incidentId = IcM.CreatOrUpdateIcM(descriptions['IcM_PerfKey'], descriptions['IcM_Title'], descriptions['IcM_Description'], descriptions['fileName'])
+                incidentId = IcM.CreatOrUpdateIcM(perfKey, descriptions['IcM_Title'], descriptions['IcM_Description'], descriptions['fileName'])
                 Logger.PerfAnomaly(externalServiceName, requestUrl, detectedDate, incidentId, descriptions['IcM_Description'])
             except Exception as e:
                 Logger.ExecuteError(KustoLogType.call_icm_error, externalServiceName, requestUrl, detectedDate, "Unexpected error: {}".format(e))            

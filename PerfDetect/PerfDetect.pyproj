@@ -44,7 +44,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="IcMManager\credentials.py" />
-    <Compile Include="IcMManager\environment.py" />
     <Compile Include="IcMManager\IcMManager.py">
       <SubType>Code</SubType>
     </Compile>
@@ -53,20 +52,39 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Logger\credentials.py" />
-    <Compile Include="Logger\environment.py" />
     <Compile Include="Logger\KustoLogger.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Logger\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MongoDB\MongoDB.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MongoDB\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PerfDetect.py" />
+    <Compile Include="Test\test_externalServiceCallPerfDataProvider.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Test\test_icmManager.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Test\test_sqlConnector.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Test\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DataProvider\" />
     <Folder Include="GaussFitting\" />
     <Folder Include="IcMManager\" />
     <Folder Include="Logger\" />
+    <Folder Include="MongoDB\" />
+    <Folder Include="Test\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

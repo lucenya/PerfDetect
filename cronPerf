@@ -1,1 +1,0 @@
-*/5 * * * * root python3 /home/PerfDetect/PerfDetect.py >> /var/log/perfdetect.log 2>&1

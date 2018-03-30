@@ -1,7 +1,6 @@
 FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \
-python3-pandas python3-numpy python3-scipy python3-matplotlib \
 curl apt-utils apt-transport-https debconf-utils gcc build-essential unixodbc-dev
 
 # python libraries
@@ -11,7 +10,7 @@ python3-pip python3-dev python3-setuptools \
 && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip install pyodbc peakutils
+RUN python3 -m pip install pyodbc peakutils retry pymongo pandas numpy matplotlib scipy
 
 # adding custom MS repository
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -

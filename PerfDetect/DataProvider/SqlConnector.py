@@ -6,16 +6,20 @@ columnNameList = ['startDayHour','externalServiceName','externalServiceCall','re
 class SqlConnector:    
 
     def __init__(self, **kwargs):
-        self.cursor = self.connectDB();
+        self.connectDB();
 
     def connectDB(self):
         server = 'tcp:ucmloggingdatawarehouse.database.windows.net,1433' 
         database = 'ucmloggingdatawarehouse' 
         username = 'loggingDW_readonly' 
         password = 'Read@Only123' 
-        cnxn = pyodbc.connect('DRIVER={ODBC Driver 13 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
-        cursor = cnxn.cursor()
-        return cursor
+        self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 13 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
+        self.cursor = self.cnxn.cursor()
+
+    def DisConnectDB(self):
+        self.cursor.close()
+        del self.cursor
+        self.cnxn.close()
 
     def GetDataAsDataFrame(self, sqlQuery):
         self.cursor.execute(sqlQuery)
@@ -39,4 +43,5 @@ class SqlConnector:
             row = self.cursor.fetchone()
         return requestUrlList
 
+    
 

@@ -31,12 +31,12 @@ class ExternalServiceCallPerfDataProvider(object):
         for name in SqlConnector.columnNameList:
             columnNames = columnNames + "[" + name + "],"
         columnNames = columnNames[0:len(columnNames)-1]
-        sqlQuery = "SELECT TOP(120)" + columnNames + \
-                "FROM [Kusto].[ExternalServiceCallPercentileTrend_Day]" + \
+        sqlQuery = "SELECT TOP(120) " + columnNames + \
+                "FROM [Kusto].[ExternalServiceCallPercentileTrend_Day] " + \
                 "where externalServiceName = '" + externalServiceName +"' and " + \
                 "requestUrl='" + requestUrl + "' and " + \
                 "externalServiceCall='All' and " + \
-                "DATENAME(dw, startDayHour)<>'Saturday' and DATENAME(dw,startDayHour)<>'Sunday'" + \
+                "DATENAME(dw, startDayHour)<>'Saturday' and DATENAME(dw,startDayHour)<>'Sunday' " + \
                 "order by startDayHour desc"
         return sqlQuery
 

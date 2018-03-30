@@ -3,8 +3,6 @@ import numpy as np
 import peakutils
 import pandas as pd
 
-lastTwoGaussPFile = "/home/PerfDetect/lastTwoGaussP.csv"
-
 def twoGaussFunc(par, t):
     return (par[0]/2)*np.exp(-np.power(t-par[2],2)/(2*np.power(par[1],2))) + \
             (par[3]/2)*np.exp(-np.power(t-par[5],2)/(2*np.power(par[4],2)))
@@ -68,27 +66,16 @@ def getThreshold(pEst):
         s = abs(pEst[4])
     return mu+2*s
 
-def getLastTwoGaussP(perfKey):
-    lastTwoGaussP = pd.read_csv(lastTwoGaussPFile, header=0)
-    lastTwoGaussPDic = lastTwoGaussP.to_dict('list')
-    return lastTwoGaussPDic
-
-def setLastTwoGaussP(lastTwoGaussPDic, perfKey, pValue):
-    lastTwoGaussPDic[perfKey] = pValue
-    df = pd.DataFrame.from_dict(lastTwoGaussPDic)
-    df.to_csv(lastTwoGaussPFile, index=False)
-
-def Fitting(density, perfKey):
-    lastTwoGaussP = getLastTwoGaussP(perfKey)
-    lastPerfKeyP = lastTwoGaussP[perfKey] if perfKey in lastTwoGaussP else []
-    p0 = getTwoGaussP0(density, lastPerfKeyP)
+def Fitting(density, perfKey, mongoDB):
+    lastTwoGaussP = mongoDB.GetTwoGaussP(perfKey)
+    p0 = getTwoGaussP0(density, lastTwoGaussP)
     pEst= leastsq(errTwoGaussFunc, p0, args = (density['x'], density['y']))
     density['param0'] = p0
     density['y0Est'] = twoGaussFunc(p0,density['x'])
     density['param'] = pEst[0]
     density['yEst'] = twoGaussFunc(pEst[0],density['x'])
     density['threshold'] = getThreshold(pEst[0])
-    setLastTwoGaussP(lastTwoGaussP, perfKey, density['param'].tolist())
+    mongoDB.SaveTwoGaussP(perfKey, density['param'].tolist())
     return density
 
 
