@@ -23,9 +23,9 @@ class IcMManager(object):
         self.mongoDB = mongoDB
 
     def CreatOrUpdateIcM(self, perfKey, title, descriptionEntryText, attachedFile):
-        existIncidentId = self.mongoDB.GetIncident(perfKey)
-        if (existIncidentId != -1 and self.isIcMActive(existIncidentId)):
-            self.updateIcM(existIncidentId, descriptionEntryText)            
+        incidentId = self.mongoDB.GetIncident(perfKey)
+        if (incidentId != -1 and self.isIcMActive(incidentId)):
+            self.updateIcM(incidentId, descriptionEntryText)            
         else:
             incidentId = self.createIcM(title, descriptionEntryText)
             self.mongoDB.SaveIncident(perfKey, incidentId)
