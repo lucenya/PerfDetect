@@ -9,6 +9,7 @@ INCIDENT_ID = "incidentId"
 class MongoDB(object):
     def __init__(self):
         uri = "mongodb://perfdetect:asdlkj@mongo/default_db?authSource=perfdetect"
+        #uri = "mongodb://perfdetect:asdlkj@127.0.0.1:27017/default_db?authSource=perfdetect"
         self.client = MongoClient(uri)
         self.db = self.client["perfdetect"]
         self.lastTwoGaussP = self.db["lastTwoGaussP"]

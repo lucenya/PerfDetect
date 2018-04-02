@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>fde657e0-494d-4193-aa8c-321de9691e52</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>PerfDetect.py</StartupFile>
+    <StartupFile>PerfIcmAlert.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,69 +22,76 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DataProvider\ExternalServiceCallPerfDataProvider.py">
+    <Compile Include="PerfDetect\DataProvider\ExternalServiceCallPerfDataProvider.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DataProvider\SqlConnector.py">
+    <Compile Include="PerfDetect\DataProvider\SqlConnector.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DataProvider\__init__.py">
+    <Compile Include="PerfDetect\DataProvider\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="GaussFitting\DensityProvider.py">
+    <Compile Include="PerfDetect\GaussFitting\DensityProvider.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="GaussFitting\OneGaussFitting.py">
+    <Compile Include="PerfDetect\GaussFitting\OneGaussFitting.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="GaussFitting\TwoGaussFitting.py">
+    <Compile Include="PerfDetect\GaussFitting\TwoGaussFitting.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="GaussFitting\__init__.py">
+    <Compile Include="PerfDetect\GaussFitting\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="IcMManager\credentials.py" />
-    <Compile Include="IcMManager\IcMManager.py">
+    <Compile Include="PerfDetect\IcMManager\credentials.py" />
+    <Compile Include="PerfDetect\IcMManager\IcMManager.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="IcMManager\icm_client.py" />
-    <Compile Include="IcMManager\__init__.py">
+    <Compile Include="PerfDetect\IcMManager\icm_client.py" />
+    <Compile Include="PerfDetect\IcMManager\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Logger\credentials.py" />
-    <Compile Include="Logger\KustoLogger.py">
+    <Compile Include="PerfDetect\Logger\credentials.py" />
+    <Compile Include="PerfDetect\Logger\KustoLogger.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Logger\__init__.py">
+    <Compile Include="PerfDetect\Logger\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MongoDB\MongoDB.py">
+    <Compile Include="PerfDetect\MongoDB\MongoDB.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MongoDB\__init__.py">
+    <Compile Include="PerfDetect\MongoDB\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PerfDetect.py" />
-    <Compile Include="Test\test_externalServiceCallPerfDataProvider.py">
+    <Compile Include="PerfDetect\PerfDetect.py" />
+    <Compile Include="PerfDetect\__init__.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Test\test_icmManager.py">
+    <Compile Include="PerfDetect\Test\test_externalServiceCallPerfDataProvider.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Test\test_sqlConnector.py">
+    <Compile Include="PerfDetect\Test\test_icmManager.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Test\__init__.py">
+    <Compile Include="PerfDetect\Test\test_sqlConnector.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="PerfDetect\Test\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="PerfIcmAlert.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="DataProvider\" />
-    <Folder Include="GaussFitting\" />
-    <Folder Include="IcMManager\" />
-    <Folder Include="Logger\" />
-    <Folder Include="MongoDB\" />
-    <Folder Include="Test\" />
+    <Folder Include="PerfDetect\DataProvider\" />
+    <Folder Include="PerfDetect\GaussFitting\" />
+    <Folder Include="PerfDetect\IcMManager\" />
+    <Folder Include="PerfDetect\Logger\" />
+    <Folder Include="PerfDetect\MongoDB\" />
+    <Folder Include="PerfDetect\" />
+    <Folder Include="PerfDetect\Test\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

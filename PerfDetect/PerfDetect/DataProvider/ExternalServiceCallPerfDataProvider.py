@@ -7,6 +7,9 @@ class ExternalServiceCallPerfDataProvider(object):
     def __init__(self):
         self.sqlConnect = SqlConnector.SqlConnector()
 
+    def GetExternalServiceNameList(self):
+        return externalServiceNameList
+
     def GetPerfData(self, externalServiceName, requestUrl):
         sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, requestUrl)
         return self.sqlConnect.GetDataAsDataFrame(sqlQuery)
