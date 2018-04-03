@@ -22,14 +22,15 @@ class IcMManager(object):
         self.icm_api = icm_client.ICMApi(icm_host=host, cert=cert, key=key, connector_id=connector_id, debug=True)
         self.mongoDB = mongoDB
 
-    def CreatOrUpdateIcM(self, perfKey, title, descriptionEntryText, attachedFile):
+    def CreatOrUpdateIcM(self, perfKey, title, descriptionEntryText, attachedChart, attachedData):
         incidentId = self.mongoDB.GetIncident(perfKey)
         if (incidentId != -1 and self.isIcMActive(incidentId)):
             self.updateIcM(incidentId, descriptionEntryText)            
         else:
             incidentId = self.createIcM(title, descriptionEntryText)
             self.mongoDB.SaveIncident(perfKey, incidentId)
-        self.addAttachment(incidentId, attachedFile)
+        self.addAttachment(incidentId, attachedChart)
+        self.addAttachment(incidentId, attachedData)
         return incidentId
 
     def createIcM(self, title, descriptionEntryText):

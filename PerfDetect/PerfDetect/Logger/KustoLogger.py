@@ -11,8 +11,7 @@ class KustoLogType(object):
     call_icm_error = "CallIcMError"
 
 class KustoLogger(object):
-    _log_keys = ["TIMESTAMP", "PreciseTimeStamp", "Tenant", "Role", "RoleInstance", "Level", "ProviderGuid",
-                 "ProviderName", "IncidentId", "Status", "LogType", "Context"]
+    _log_keys = ["TIMESTAMP", "Role", "RoleInstance", "Level", "ProviderName", "ExternalServiceName", "IncidentId", "Status", "LogType", "Context"]
 
     def __init__(self):
         self.ingest_client = KustoIngestClient(credentials.kusto_ppe_ingest_connection,
@@ -28,7 +27,7 @@ class KustoLogger(object):
             "DetectedDate": detectedDate            
         }
         self._write_log(log_type=KustoLogType.perf_normal, is_succeed=True, incident_id='',
-                        context=context, push_remote=True)
+                        context=context, externalServiceName=externalServiceName, push_remote=True)
 
     def PerfAnomaly(self, externalServiceName, requestUrl, detectedDate, incident_id, log):
         context = {
@@ -39,7 +38,7 @@ class KustoLogger(object):
             "Log": log
         }
         self._write_log(log_type=KustoLogType.perf_anomaly, is_succeed=True, incident_id=incident_id,
-                        context=context, push_remote=True)
+                        context=context, externalServiceName=externalServiceName, push_remote=True)
 
     def ExecuteError(self, logType, externalServiceName, requestUrl, detectedDate, log):
         context = {
@@ -48,20 +47,18 @@ class KustoLogger(object):
             "DetectedDate": detectedDate,
             "Log": log
         }
-        self._write_log(log_type=logType, is_succeed=False, incident_id='',context=context, push_remote=True)
+        self._write_log(log_type=logType, is_succeed=False, incident_id='',context=context, externalServiceName=externalServiceName, push_remote=True)
         
-    def _write_log(self, log_type: object, is_succeed: object, incident_id: object = None, context: object = None,
+    def _write_log(self, log_type: object, is_succeed: object, incident_id: object = None, context: object = None, externalServiceName: object = None, 
                    push_remote: object = False):
         now = str(datetime.utcnow())
         log = {
             "TIMESTAMP": now,
-            "PreciseTimeStamp": now,
-            "Tenant": "Production-Container-CentralUS",
             "Role": "Microsoft.UCM.PerfIcMAlert",
             "RoleInstance": "Microsoft.UCM.PerfIcMAlert_IN_1",
             "Level": 4,
-            "ProviderGuid": "41d378e3-f3fc-5079-4f2d-69dc57bf7f41",
             "ProviderName": "PyEventSource",
+            "ExternalServiceName": externalServiceName,
             "IncidentId": incident_id,
             "Status": "Success" if is_succeed else "Failure",
             "LogType": log_type,
@@ -82,4 +79,4 @@ class KustoLogger(object):
 
 
 if __name__ == "__main__":
-    KustoLogger()._write_log("JobExecutionError", False, context="Testing", push_remote=True)
+    KustoLogger()._write_log("JobExecutionError", False, context="Testing", externalServiceName="Test", push_remote=True)

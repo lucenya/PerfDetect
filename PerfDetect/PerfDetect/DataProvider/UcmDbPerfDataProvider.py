@@ -1,39 +1,38 @@
 from . import SqlConnector
 
-externalServiceNameList=['AdInsightsMiddleTier','BillingMiddleTier','CampaignMiddleTier','CampaignAggregatorService','ClientCenterMiddleTier','MessageCenterMiddleTier','ReportingMiddleTier']
+externalServiceNameList=['UcmDbConn', 'UcmTicketingDbConn', 'UcmBusinessReportingDbConn', 'UcmStagingConn']
 
-class ExternalServiceCallPerfDataProvider(object):
-
+class UcmDbPerfDataProvider(object):    
     def __init__(self):
         self.sqlConnect = SqlConnector.SqlConnector()
 
     def GetExternalServiceNameList(self):
         return externalServiceNameList
 
-    def GetPerfData(self, externalServiceName, requestUrl):
-        sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, requestUrl)
+    def GetPerfData(self, externalServiceName, externalServiceCall):
+        sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, externalServiceCall)
         return self.sqlConnect.GetDataAsDataFrame(sqlQuery)
 
-    def GetRequestUrlList(self, externalServiceName, startDate):
-        sqlQuery = self.getRequestUrlListSQLQuery(externalServiceName, startDate)
+    def GetExternalServiceCallList(self, externalServiceName, startDate):
+        sqlQuery = self.getExternalServiceCallListQuery(externalServiceName, startDate)
         return self.sqlConnect.GetDataAsList(sqlQuery)
-    
+
     def GetStartDate(self, externalServiceName):
         sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, 'All')
         df = self.sqlConnect.GetDataAsDataFrame(sqlQuery)
         return df.iloc[0].startDayHour
 
-    def getRequestUrlListSQLQuery(self, externalServiceName, startDate):
-        sqlQuery = "SELECT DISTINCT requestUrl " + \
+    def getExternalServiceCallListQuery(self, externalServiceName, startDate):
+        sqlQuery = "SELECT DISTINCT externalServiceCall " + \
                 "FROM [Kusto].[ExternalServiceCallPercentileTrend_Day]" + \
                 "WHERE externalServiceName='" + externalServiceName + "' and " + \
-                "requestUrl not like '%-%' and requestUrl not like '%?%' and " + \
-                "externalServiceCall='All' and " + \
+                "requestUrl='All' and " + \
+                "(externalServiceCall='All' or externalServiceCall like '%]%') and " +\
                 "DATENAME(dw, startDayHour)<>'Saturday' and DATENAME(dw,startDayHour)<>'Sunday' and " + \
                 "startDayHour>='" + startDate.strftime("%Y-%m-%d") + "'"
         return sqlQuery
 
-    def getExternalServiceCallSQLQuery(self, externalServiceName, requestUrl):
+    def getExternalServiceCallSQLQuery(self, externalServiceName, externalServiceCall):
         columnNames = ""
         for name in SqlConnector.columnNameList:
             columnNames = columnNames + "[" + name + "],"
@@ -41,10 +40,8 @@ class ExternalServiceCallPerfDataProvider(object):
         sqlQuery = "SELECT TOP(120) " + columnNames + \
                 "FROM [Kusto].[ExternalServiceCallPercentileTrend_Day] " + \
                 "where externalServiceName = '" + externalServiceName +"' and " + \
-                "requestUrl='" + requestUrl + "' and " + \
-                "externalServiceCall='All' and " + \
+                "requestUrl='All' and " + \
+                "externalServiceCall='" + externalServiceCall + "' and " + \
                 "DATENAME(dw, startDayHour)<>'Saturday' and DATENAME(dw,startDayHour)<>'Sunday' " + \
                 "order by startDayHour desc"
         return sqlQuery
-
-
