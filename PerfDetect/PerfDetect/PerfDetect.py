@@ -5,6 +5,7 @@ import sys
 from datetime import datetime
 from PerfDetect.DataProvider.ExternalServiceCallPerfDataProvider import ExternalServiceCallPerfDataProvider
 from PerfDetect.DataProvider.UcmDbPerfDataProvider import UcmDbPerfDataProvider
+from PerfDetect.DataProvider.UcmOverallPerfDataProvider import UcmOverallPerfDataProvider
 from PerfDetect.GaussFitting import DensityProvider
 from PerfDetect.GaussFitting import OneGaussFitting
 from PerfDetect.GaussFitting import TwoGaussFitting
@@ -20,6 +21,7 @@ class PerfDetect(object):
         self.IcM = IcMManager(self.mongoDB)
         self.externalServiceDataProvider = ExternalServiceCallPerfDataProvider()
         self.ucmDbDataProvider = UcmDbPerfDataProvider()
+        self.ucmOverallPerfDataProvider = UcmOverallPerfDataProvider()
         return super().__init__(**kwargs)
 
     def saveChart(self, density, origin, anomaly, fileName):
@@ -111,26 +113,15 @@ class PerfDetect(object):
                 self.startDetect(externalServiceName, externalServiceCall, origin)
         print('UCM DB Perf Detect End {}'.format(datetime.now()))
 
-    #def DetectUcmDb(self):
-    #    print('UCM DB Perf Detect Start {}'.format(datetime.now()))
-    #    for externalServiceName in self.ucmDbDataProvider.GetExternalServiceNameList():
-    #        startDate = self.ucmDbDataProvider.GetStartDate(externalServiceName)
-    #        externalServiceCallList = self.ucmDbDataProvider.GetExternalServiceCallList(externalServiceName, startDate)            
-    #        for externalServiceCall in externalServiceCallList:
-    #            print("\nStart Detecting {} {}".format(externalServiceName, externalServiceCall))
-    #            if (not self.isExpectedExternalServiceCall(externalServiceCall)):
-    #                print("Ignore")
-    #                continue
-    #            data = self.ucmDbDataProvider.GetPerfData(externalServiceName, externalServiceCall)
-    #            period = 120
-    #            endIndex = len(data)
-    #            for i in range(period,endIndex):
-    #                t0 = i - period
-    #                origin = data[t0:i]
-    #                self.startDetect(externalServiceName, externalServiceCall, origin)
-    #    print('UCM DB Perf Detect End {}'.format(datetime.now()))
-
-
-#perfdetect = PerfDetect()
-#perfdetect.DetectExternalServiceCall()
-    
+    def DetectUcmOverall(self):
+        print('UCM Overall Perf Detect Start {}'.format(datetime.now()))
+        for workSpace in self.ucmOverallPerfDataProvider.GetWorkSpaceList():
+            serviceList = self.ucmOverallPerfDataProvider.GetDetectedServiceList(workSpace)            
+            for service in serviceList:
+                print("\nStart Detecting {} in {}".format(service, workSpace))
+                origin = self.ucmOverallPerfDataProvider.GetPerfData(service)
+                if (origin.shape[0] != 120):
+                    print("{} doesn't contain last 120 weekday data".format(service))
+                    continue
+                self.startDetect(workSpace, service, origin)
+        print('UCM Overall Perf Detect End {}'.format(datetime.now()))

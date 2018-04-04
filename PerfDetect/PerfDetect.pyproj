@@ -31,6 +31,9 @@
     <Compile Include="PerfDetect\DataProvider\UcmDbPerfDataProvider.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="PerfDetect\DataProvider\UcmOverallPerfDataProvider.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PerfDetect\DataProvider\__init__.py">
       <SubType>Code</SubType>
     </Compile>

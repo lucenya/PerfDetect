@@ -2,6 +2,7 @@ import pyodbc
 import pandas as pd
 
 columnNameList = ['startDayHour','externalServiceName','externalServiceCall','requestUrl','numSamples','maxDuration','duration_P50','duration_P75','duration_P95','duration_P99']
+overallColumnNameList = ['startDayHour','userAlias','pageRoute','recordingName','workspace','numSamples','maxDuration','duration_P50','duration_P75','duration_P95','duration_P99']
 
 class SqlConnector:    
 
@@ -21,7 +22,7 @@ class SqlConnector:
         del self.cursor
         self.cnxn.close()
 
-    def GetDataAsDataFrame(self, sqlQuery):
+    def GetDataAsDataFrame(self, sqlQuery, columnNameList):
         self.cursor.execute(sqlQuery)
         df = pd.DataFrame()
         row = self.cursor.fetchone()

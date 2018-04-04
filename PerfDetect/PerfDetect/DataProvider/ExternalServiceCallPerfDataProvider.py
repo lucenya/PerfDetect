@@ -12,7 +12,7 @@ class ExternalServiceCallPerfDataProvider(object):
 
     def GetPerfData(self, externalServiceName, requestUrl):
         sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, requestUrl)
-        return self.sqlConnect.GetDataAsDataFrame(sqlQuery)
+        return self.sqlConnect.GetDataAsDataFrame(sqlQuery, SqlConnector.columnNameList)
 
     def GetRequestUrlList(self, externalServiceName, startDate):
         sqlQuery = self.getRequestUrlListSQLQuery(externalServiceName, startDate)
@@ -20,7 +20,7 @@ class ExternalServiceCallPerfDataProvider(object):
     
     def GetStartDate(self, externalServiceName):
         sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, 'All')
-        df = self.sqlConnect.GetDataAsDataFrame(sqlQuery)
+        df = self.sqlConnect.GetDataAsDataFrame(sqlQuery, SqlConnector.columnNameList)
         return df.iloc[0].startDayHour
 
     def getRequestUrlListSQLQuery(self, externalServiceName, startDate):

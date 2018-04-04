@@ -11,7 +11,7 @@ class UcmDbPerfDataProvider(object):
 
     def GetPerfData(self, externalServiceName, externalServiceCall):
         sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, externalServiceCall)
-        return self.sqlConnect.GetDataAsDataFrame(sqlQuery)
+        return self.sqlConnect.GetDataAsDataFrame(sqlQuery, SqlConnector.columnNameList)
 
     def GetExternalServiceCallList(self, externalServiceName, startDate):
         sqlQuery = self.getExternalServiceCallListQuery(externalServiceName, startDate)
@@ -19,7 +19,7 @@ class UcmDbPerfDataProvider(object):
 
     def GetStartDate(self, externalServiceName):
         sqlQuery = self.getExternalServiceCallSQLQuery(externalServiceName, 'All')
-        df = self.sqlConnect.GetDataAsDataFrame(sqlQuery)
+        df = self.sqlConnect.GetDataAsDataFrame(sqlQuery, SqlConnector.columnNameList)
         return df.iloc[0].startDayHour
 
     def getExternalServiceCallListQuery(self, externalServiceName, startDate):
